@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>學生關鍵字查詢</title>
+<style>
+body { font-family: sans-serif; padding: 20px; }
+table { border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 8px; border: 1px solid #ccc; }
+#btnQuery { cursor: pointer; }
+</style>
+
+<script>
+var GAS_URL = "https://script.google.com/macros/s/AKfycbyHkQ3truppoRzvL-QBuex-cN4_idHnP0uwsrIiyOsX4E30bKO3cp9B8Aq-8f8uvg-oTg/exec";
+
+// 取得驗證碼
+function getAuthCode() {
+  let code = sessionStorage.getItem("authCode");
+  if (!code) {
+    code = prompt("請輸入驗證碼：");
+    if (!code) return null;
+    sessionStorage.setItem("authCode", code);
+  }
+  return code;
+}
+
+// 🔹 強制生日格式統一 YYYY-MM-DD
+function formatBirthday(value) {
+  if (!value) return "";
+
+  value = value.toString().trim();
+
+  // 如果是 ISO 格式 2013-07-08T07:00:00.000Z
+  if (value.includes("T")) {
+    return value.split("T")[0];
+  }
+
+  // 如果是 2017/02/21
+  if (value.includes("/")) {
+    return value.replace(/\//g, "-");
+  }
+
+  // 已經是 YYYY-MM-DD
+  return value;
+}
+
+// 查詢功能
+function bestdaylong_show(str) {
+
+  document.getElementById("order_status").innerHTML = "";
+
+  if (!str || str.trim() === "") {
+    alert("請輸入學生關鍵字");
+    return;
+  }
+
+  const code = getAuthCode();
+  if (!code) return;
+
+  setLoading(true);
+
+  const get_url = GAS_URL + "?uid=" + encodeURIComponent(str) + "&code=" + encodeURIComponent(code);
+
+  fetch(get_url)
+    .then(r => r.text())
+    .then(text => {
+
+      setLoading(false);
+
+      let obj;
+      try {
+        obj = JSON.parse(text);
+      } catch(e) {
+        alert("資料解析失敗");
+        return;
+      }
+
+      if (obj.auth === false) {
+        alert(obj.message || "驗證碼錯誤");
+        sessionStorage.removeItem("authCode");
+        return;
+      }
+
+      if (obj.ok === false) {
+        alert(obj.message || "查詢發生錯誤");
+        return;
+      }
+
+      var html = '<table width="100%">';
+
+      for (var i = 0; i < obj.length; i++) {
+
+        var tag = (i === 0) ? "th" : "td";
+        var bg = (i === 0) ? ' style="background:#eee;"' : '';
+
+        html += "<tr" + bg + ">";
+
+        for (var j = 0; j < obj[i].data.length; j++) {
+
+          let value = obj[i].data[j];
+
+          // 🔥 第6欄 (索引5) 強制轉換生日
+          if (j === 5 && i !== 0) {
+            value = formatBirthday(value);
+          }
+
+          html += "<" + tag + ">" + value + "</" + tag + ">";
+        }
+
+        html += "</tr>";
+      }
+
+      html += "</table>";
+      document.getElementById("order_status").innerHTML = html;
+
+      if (obj.length <= 1) {
+        document.getElementById("order_status").innerHTML += "<p>查無資料</p>";
+      }
+
+    })
+    .catch(err => {
+      setLoading(false);
+      alert("系統連線失敗：" + err.message);
+    });
+}
+
+// 按鈕控制
+function setLoading(isLoading) {
+  var btn = document.getElementById("btnQuery");
+  var input = document.getElementById("uid");
+  btn.disabled = input.disabled = isLoading;
+  btn.value = isLoading ? "查詢中..." : "查詢";
+}
+
+window.addEventListener("DOMContentLoaded", function () {
+  var input = document.getElementById("uid");
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") bestdaylong_show(input.value);
+  });
+});
+</script>
+</head>
+
+<body>
+
+<h3>學生資料查詢系統</h3>
+
+關鍵字：
+<input type="text" id="uid" placeholder="請輸入關鍵字" />
+<input type="button" id="btnQuery" value="查詢"
+onclick="bestdaylong_show(document.getElementById('uid').value);" />
+
+<hr/>
+<div id="order_status"></div>
+
+</body>
+</html>
