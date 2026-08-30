@@ -135,13 +135,13 @@
       <!-- 新增社團/班級 -->
       <div class="section">
         <label><b>➕ 新增<span class="lbl-sys">社團</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 空手道 或 直排輪)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
+        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 課照A 或 直排輪)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
         
         <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
         <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)" onkeydown="if(event.key==='Enter') document.getElementById('pasteStudents').focus();">
         
         <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
-        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王維磬&#9;三年二班&#10;張晴嵐&#9;二年三班"></textarea>
+        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王小明&#9;三年二班&#10;林小華&#9;二年三班"></textarea>
         
         <button id="btnCreateClub" class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬短網址</button>
       </div>
