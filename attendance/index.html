@@ -73,16 +73,16 @@
 <div class="card">
   <h2><span class="lbl-sys">社團</span>點名簿</h2>
 
-  <!-- 1. 初次無綁定時的設定視圖 (預設為空白欄位) -->
+  <!-- 1. 初次未綁定時的設定視圖 (預設為空白欄位) -->
   <div id="viewInitLogin" class="hidden">
     <div class="section">
       <h4 style="margin:0 0 10px 0; text-align:center;">綁定 Google 試算表</h4>
       <label><b>請輸入試算表網址：</b></label>
-      <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+      <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." onkeydown="if(event.key==='Enter') document.getElementById('initAdminPwd').focus();">
       
       <label style="margin-top:10px; display:block;"><b>管理密碼 (初次預設 1234)：</b></label>
-      <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼">
-      <button class="btn-primary" onclick="initConnectAndLogin()">確認並在本機綁定試算表</button>
+      <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼" onkeydown="if(event.key==='Enter') initConnectAndLogin();">
+      <button id="btnInitConnect" class="btn-primary" onclick="initConnectAndLogin()">確認並在本機綁定試算表</button>
     </div>
   </div>
 
@@ -103,8 +103,8 @@
     <!-- 後台管理密碼登入 -->
     <div id="adminLoginArea" class="section">
       <label><b>管理員驗證：</b></label>
-      <input type="password" id="adminGlobalPwd" placeholder="請輸入管理密碼 (預設: 1234)">
-      <button class="btn-primary" onclick="verifyAdminGlobal()">登入後台</button>
+      <input type="password" id="adminGlobalPwd" placeholder="請輸入管理密碼 (預設: 1234)" onkeydown="if(event.key==='Enter') verifyAdminGlobal();">
+      <button id="btnAdminLogin" class="btn-primary" onclick="verifyAdminGlobal()">登入後台</button>
     </div>
 
     <!-- 後台管理功能專區 -->
@@ -112,16 +112,19 @@
       <!-- 本機試算表網址修改與系統設定 -->
       <div class="section" style="border-left: 4px solid var(--admin);">
         <label><b>🔗 本機綁定試算表網址：</b></label>
-        <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址">
-        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">此網址已保留於您個人電腦中，除非更換否則持續有效；其他新裝置/老師首次開啟預設為空白。</p>
+        <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址" onkeydown="if(event.key==='Enter') saveSystemConfig();">
+        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">此網址已保留於您個人電腦中；其他新裝置/老師首次開啟預設為空白。</p>
 
         <label style="margin-top:8px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
-        <input type="text" id="cfgSystemName" placeholder="例如：社團">
+        <input type="text" id="cfgSystemName" placeholder="例如：社團" onkeydown="if(event.key==='Enter') saveSystemConfig();">
         
         <label style="margin-top:8px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
-        <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
+        <input type="password" id="cfgNewPwd" placeholder="若不修改請留空" onkeydown="if(event.key==='Enter') saveSystemConfig();">
         
-        <button class="btn-primary" onclick="saveSystemConfig()">儲存設定</button>
+        <button id="btnSaveConfig" class="btn-primary" onclick="saveSystemConfig()">儲存設定</button>
+        
+        <!-- 清除/刪除綁定按鈕 -->
+        <button id="btnClearBinding" class="btn-danger" style="margin-top:10px;" onclick="clearSheetBinding()">🗑️ 清除本機試算表綁定 (重設為空白)</button>
       </div>
 
       <!-- 各班專屬免登入網址清單 -->
@@ -134,22 +137,21 @@
       <!-- 新增社團/班級 -->
       <div class="section">
         <label><b>➕ 新增<span class="lbl-sys">社團</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 空手道 或 直排輪)">
+        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 空手道 或 直排輪)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
         
         <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
-        <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)">
+        <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)" onkeydown="if(event.key==='Enter') document.getElementById('pasteStudents').focus();">
         
         <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
-        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王小明&#9;三年二班&#10;林小華&#9;二年三班"></textarea>
+        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王維磬&#9;三年二班&#10;張晴嵐&#9;二年三班"></textarea>
         
-        <button class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬網址</button>
+        <button id="btnCreateClub" class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬網址</button>
       </div>
     </div>
   </div>
 
   <!-- 4. 點名操作頁面 -->
   <div id="viewMain" class="hidden">
-    <!-- 頂部按鈕列：專屬網址模式下整個區塊會被隱藏 -->
     <div class="btn-grid" id="mainNavGrid">
       <button id="btnBackToClubs" class="btn-nav" onclick="backToClubs()">← 更換項目</button>
       <button id="btnAdminInMain" class="btn-admin" style="margin:0; width:100%;" onclick="openAdminPanel()">⚙️ 後台</button>
@@ -174,8 +176,8 @@
         <div id="uncheckList"></div>
       </div>
       <div class="btn-grid">
-        <button class="btn-submit" onclick="startSubmit('submit')">出席點名</button>
-        <button class="btn-leave" onclick="startSubmit('leave')">學生請假</button>
+        <button id="btnSubmitAtt" class="btn-submit" onclick="startSubmit('submit')">出席點名</button>
+        <button id="btnLeaveAtt" class="btn-leave" onclick="startSubmit('leave')">學生請假</button>
       </div>
     </div>
 
@@ -200,7 +202,7 @@
     <input type="password" id="inputModalPwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter') confirmPwdModal();">
     <div class="btn-grid" style="margin-top:12px; margin-bottom:0;">
       <button class="btn-nav" onclick="closePwdModal()">取消</button>
-      <button class="btn-submit" style="font-size:15px; padding:10px;" onclick="confirmPwdModal()">確認送出</button>
+      <button id="btnModalConfirm" class="btn-submit" style="font-size:15px; padding:10px;" onclick="confirmPwdModal()">確認送出</button>
     </div>
   </div>
 </div>
@@ -216,6 +218,25 @@
   let isDedicatedMode = false;
   let pendingActionData = null;
 
+  // 按鈕 Loading 切換共用函式
+  function setBtnLoading(btn, isLoading, loadingText = "執行中...") {
+    if (!btn) return;
+    if (isLoading) {
+      btn.dataset.origText = btn.innerText;
+      btn.innerText = loadingText;
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+      btn.style.cursor = "not-allowed";
+    } else {
+      if (btn.dataset.origText) {
+        btn.innerText = btn.dataset.origText;
+      }
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+    }
+  }
+
   window.onload = async () => {
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
     
@@ -223,7 +244,6 @@
     const sheetFromUrl = urlParams.get('sheet');
     const clubFromUrl = urlParams.get('club') || "";
 
-    // 優先順序：網址參數自帶 sheet -> 本機 localStorage 記錄 -> 空白
     if (sheetFromUrl) {
       currentSheetUrl = decodeURIComponent(sheetFromUrl);
       localStorage.setItem("club_sheet_url", currentSheetUrl);
@@ -231,10 +251,9 @@
       currentSheetUrl = localStorage.getItem("club_sheet_url") || "";
     }
 
-    // 若為新裝置/別的老師首次開啟（無網址參數且無本機紀錄），呈現空白綁定頁
     if (!currentSheetUrl) {
       hideAllViews();
-      document.getElementById('initSheetUrl').value = ""; // 確保為空白欄位
+      document.getElementById('initSheetUrl').value = "";
       document.getElementById('initAdminPwd').value = "";
       document.getElementById('viewInitLogin').classList.remove('hidden');
       return;
@@ -250,7 +269,6 @@
         clearStatus();
 
         if (clubFromUrl) {
-          // 專屬直達模式
           isDedicatedMode = true;
           currentClub = decodeURIComponent(clubFromUrl);
           openMainClub(currentClub);
@@ -259,7 +277,6 @@
           loadSystemAndClubs();
         }
       } else {
-        // 紀錄無效時清除並回歸空白輸入
         localStorage.removeItem("club_sheet_url");
         currentSheetUrl = "";
         hideAllViews();
@@ -278,7 +295,6 @@
     document.querySelectorAll('.lbl-sys').forEach(el => el.innerText = name);
   }
 
-  // 讀取社團清單
   async function loadSystemAndClubs() {
     showStatus("讀取清單中...", "loading");
     try {
@@ -297,9 +313,13 @@
   async function initConnectAndLogin() {
     const url = document.getElementById('initSheetUrl').value.trim();
     const pwd = document.getElementById('initAdminPwd').value.trim();
+    const btn = document.getElementById('btnInitConnect');
+
     if (!url || !pwd) return showStatus("請輸入網址與管理密碼", "error");
 
+    setBtnLoading(btn, true);
     showStatus("正在驗證並綁定試算表...", "loading");
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -312,7 +332,7 @@
 
       if (res.status === "success") {
         currentSheetUrl = url;
-        localStorage.setItem("club_sheet_url", url); // 儲存在該電腦的 localStorage
+        localStorage.setItem("club_sheet_url", url);
         localStorage.setItem("club_admin_logged", "true");
         localStorage.setItem("club_admin_pwd", pwd);
         showStatus("綁定成功！", "success");
@@ -320,7 +340,30 @@
       } else {
         showStatus(res.message || "密碼錯誤或無法開啟該試算表！", "error");
       }
-    } catch(e) { showStatus("連線失敗", "error"); }
+    } catch(e) { 
+      showStatus("連線失敗", "error"); 
+    } finally {
+      setBtnLoading(btn, false);
+    }
+  }
+
+  // 清除/刪除本機試算表綁定
+  function clearSheetBinding() {
+    if (!confirm("確定要清除本機綁定的試算表網址嗎？\n\n清除後此電腦將回歸初始空白設定頁面。")) return;
+    
+    const btn = document.getElementById('btnClearBinding');
+    setBtnLoading(btn, true, "清除中...");
+
+    localStorage.removeItem("club_sheet_url");
+    localStorage.removeItem("club_admin_logged");
+    localStorage.removeItem("club_admin_pwd");
+    sessionStorage.clear();
+    currentSheetUrl = "";
+
+    showStatus("本機試算表綁定已成功清除！", "success");
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname;
+    }, 1000);
   }
 
   function showClubSelection(clubs) {
@@ -365,7 +408,6 @@
     loadSystemAndClubs();
   }
 
-  // 刷新點名清單
   async function refreshLists() {
     const date = document.getElementById('targetDate').value;
     if (!currentClub || !date) return;
@@ -411,7 +453,6 @@
     });
   }
 
-  // 點名送出流程
   function startSubmit(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
     if (!box.length) return showStatus("請先勾選學生！", "error");
@@ -472,7 +513,12 @@
 
     pendingActionData = null;
 
+    const btnSubmit = document.getElementById('btnSubmitAtt');
+    const btnLeave = document.getElementById('btnLeaveAtt');
+    setBtnLoading(btnSubmit, true, "寫入中...");
+    setBtnLoading(btnLeave, true, "寫入中...");
     showStatus("正在驗證密碼並寫入試算表...", "loading");
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -489,10 +535,13 @@
       }
     } catch(e) { 
       showStatus("送出失敗，請檢查網路或試算表權限", "error"); 
+    } finally {
+      setBtnLoading(btnSubmit, false);
+      setBtnLoading(btnLeave, false);
     }
   }
 
-  // 後台管理
+  // 後台專區管理
   function openAdminPanel() {
     hideAllViews();
     document.getElementById('viewAdminPanel').classList.remove('hidden');
@@ -507,9 +556,12 @@
 
   async function verifyAdminGlobal() {
     const pwd = document.getElementById('adminGlobalPwd').value.trim();
+    const btn = document.getElementById('btnAdminLogin');
     if (!pwd) return showStatus("請輸入管理者密碼", "error");
 
+    setBtnLoading(btn, true);
     showStatus("驗證中...", "loading");
+
     try {
       const res = await fetch(`${API_URL}?action=verifyPassword&sheetUrl=${encodeURIComponent(currentSheetUrl)}&password=${encodeURIComponent(pwd)}`).then(r => r.json());
       if (res.success) {
@@ -521,7 +573,11 @@
       } else {
         showStatus("管理者密碼錯誤！", "error");
       }
-    } catch(e) { showStatus("驗證失敗", "error"); }
+    } catch(e) { 
+      showStatus("驗證失敗", "error"); 
+    } finally {
+      setBtnLoading(btn, false);
+    }
   }
 
   async function setupAdminActionArea() {
@@ -537,7 +593,6 @@
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
     if (res.clubs && res.clubs.length > 0) {
       res.clubs.forEach(c => {
-        // 專屬直達網址會自動附帶 sheet 與 club 參數
         const directUrl = `${baseUrl}?sheet=${encodeURIComponent(currentSheetUrl)}&club=${encodeURIComponent(c)}`;
         const row = document.createElement('div');
         row.className = "club-item-row";
@@ -560,7 +615,6 @@
     }
   }
 
-  // 登出管理員身分（本機試算表網址保留）
   function adminLogout() {
     localStorage.removeItem("club_admin_logged");
     localStorage.removeItem("club_admin_pwd");
@@ -568,16 +622,18 @@
     location.reload();
   }
 
-  // 後台儲存設定 (包含修改本機試算表網址)
   async function saveSystemConfig() {
     const newSheet = document.getElementById('cfgSheetUrl').value.trim();
     const newName = document.getElementById('cfgSystemName').value.trim();
     const newPwd = document.getElementById('cfgNewPwd').value.trim();
     const adminPwd = localStorage.getItem("club_admin_pwd");
+    const btn = document.getElementById('btnSaveConfig');
 
     if (!newSheet) return showStatus("試算表網址不能為空", "error");
 
+    setBtnLoading(btn, true);
     showStatus("正在儲存設定...", "loading");
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -593,7 +649,7 @@
 
       if (res.status === "success") {
         currentSheetUrl = newSheet;
-        localStorage.setItem("club_sheet_url", newSheet); // 更新本機儲存的試算表網址
+        localStorage.setItem("club_sheet_url", newSheet);
         applySystemName(newName);
         if (newPwd) localStorage.setItem("club_admin_pwd", newPwd);
         showStatus("設定已成功儲存！", "success");
@@ -601,7 +657,11 @@
       } else {
         showStatus("儲存失敗：" + res.message, "error");
       }
-    } catch(e) { showStatus("儲存失敗", "error"); }
+    } catch(e) { 
+      showStatus("儲存失敗", "error"); 
+    } finally {
+      setBtnLoading(btn, false);
+    }
   }
 
   async function createNewClub() {
@@ -609,6 +669,7 @@
     const pwd = document.getElementById('newClubPwd').value.trim();
     const rawData = document.getElementById('pasteStudents').value.trim();
     const adminPwd = localStorage.getItem("club_admin_pwd");
+    const btn = document.getElementById('btnCreateClub');
 
     if (!name) return showStatus("請輸入名稱", "error");
 
@@ -625,7 +686,9 @@
       });
     });
 
+    setBtnLoading(btn, true);
     showStatus("正在建立工作表...", "loading");
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -648,7 +711,11 @@
       } else {
         showStatus("建立失敗：" + res.message, "error");
       }
-    } catch(e) { showStatus("建立失敗", "error"); }
+    } catch(e) { 
+      showStatus("建立失敗", "error"); 
+    } finally {
+      setBtnLoading(btn, false);
+    }
   }
 
   function copyText(text, label) {
