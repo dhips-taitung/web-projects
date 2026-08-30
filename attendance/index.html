@@ -73,16 +73,16 @@
 <div class="card">
   <h2><span class="lbl-sys">社團</span>點名簿</h2>
 
-  <!-- 1. 初次未綁定試算表時的初始化登入視圖 -->
+  <!-- 1. 初次無綁定時的設定視圖 (預設為空白欄位) -->
   <div id="viewInitLogin" class="hidden">
     <div class="section">
-      <h4 style="margin:0 0 10px 0; text-align:center;">系統初始化綁定試算表</h4>
-      <label><b>請輸入 Google 試算表網址：</b></label>
+      <h4 style="margin:0 0 10px 0; text-align:center;">綁定 Google 試算表</h4>
+      <label><b>請輸入試算表網址：</b></label>
       <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
       
-      <label style="margin-top:10px; display:block;"><b>管理密碼 (預設 1234)：</b></label>
+      <label style="margin-top:10px; display:block;"><b>管理密碼 (初次預設 1234)：</b></label>
       <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼">
-      <button class="btn-primary" onclick="initConnectAndLogin()">儲存並永久綁定試算表</button>
+      <button class="btn-primary" onclick="initConnectAndLogin()">確認並在本機綁定試算表</button>
     </div>
   </div>
 
@@ -109,12 +109,11 @@
 
     <!-- 後台管理功能專區 -->
     <div id="adminActionArea" class="hidden">
-      
-      <!-- 試算表網址修改與系統設定 -->
+      <!-- 本機試算表網址修改與系統設定 -->
       <div class="section" style="border-left: 4px solid var(--admin);">
-        <label><b>🔗 綁定試算表網址 (伺服器永久保存)：</b></label>
+        <label><b>🔗 本機綁定試算表網址：</b></label>
         <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址">
-        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">網址已儲存於伺服器，所有人與裝置免設定直接共用，若需更換新表在此貼上儲存即可。</p>
+        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">此網址已保留於您個人電腦中，除非更換否則持續有效；其他新裝置/老師首次開啟預設為空白。</p>
 
         <label style="margin-top:8px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
         <input type="text" id="cfgSystemName" placeholder="例如：社團">
@@ -122,7 +121,7 @@
         <label style="margin-top:8px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
         <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
         
-        <button class="btn-primary" onclick="saveSystemConfig()">儲存系統設定</button>
+        <button class="btn-primary" onclick="saveSystemConfig()">儲存設定</button>
       </div>
 
       <!-- 各班專屬免登入網址清單 -->
@@ -193,7 +192,7 @@
   <div id="status"></div>
 </div>
 
-<!-- 5. 密碼輸入彈窗 (老師點名送出時跳出) -->
+<!-- 5. 密碼輸入彈窗 -->
 <div id="pwdModal" class="modal-overlay hidden">
   <div class="modal-card">
     <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">點名密碼驗證</h3>
@@ -221,26 +220,37 @@
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
     
     const urlParams = new URLSearchParams(window.location.search);
-    const sheetFromUrl = urlParams.get('sheet') || "";
+    const sheetFromUrl = urlParams.get('sheet');
     const clubFromUrl = urlParams.get('club') || "";
 
-    showStatus("正在連線系統...", "loading");
+    // 優先順序：網址參數自帶 sheet -> 本機 localStorage 記錄 -> 空白
+    if (sheetFromUrl) {
+      currentSheetUrl = decodeURIComponent(sheetFromUrl);
+      localStorage.setItem("club_sheet_url", currentSheetUrl);
+    } else {
+      currentSheetUrl = localStorage.getItem("club_sheet_url") || "";
+    }
+
+    // 若為新裝置/別的老師首次開啟（無網址參數且無本機紀錄），呈現空白綁定頁
+    if (!currentSheetUrl) {
+      hideAllViews();
+      document.getElementById('initSheetUrl').value = ""; // 確保為空白欄位
+      document.getElementById('initAdminPwd').value = "";
+      document.getElementById('viewInitLogin').classList.remove('hidden');
+      return;
+    }
+
+    showStatus("正在連線試算表...", "loading");
 
     try {
-      // 向後端請求系統連線資訊 (自動從伺服器端讀取已儲存的試算表網址)
-      const res = await fetch(`${API_URL}?action=getSystemConfig&sheetUrl=${encodeURIComponent(sheetFromUrl)}`).then(r => r.json());
+      const res = await fetch(`${API_URL}?action=getSystemConfig&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
 
-      if (res.status === "need_init") {
-        clearStatus();
-        hideAllViews();
-        document.getElementById('viewInitLogin').classList.remove('hidden');
-      } else if (res.status === "success") {
-        currentSheetUrl = res.sheetUrl;
+      if (res.status === "success") {
         if (res.systemName) applySystemName(res.systemName);
         clearStatus();
 
         if (clubFromUrl) {
-          // 專屬模式：直達指定社團
+          // 專屬直達模式
           isDedicatedMode = true;
           currentClub = decodeURIComponent(clubFromUrl);
           openMainClub(currentClub);
@@ -249,10 +259,16 @@
           loadSystemAndClubs();
         }
       } else {
-        showStatus("連線異常：" + res.message, "error");
+        // 紀錄無效時清除並回歸空白輸入
+        localStorage.removeItem("club_sheet_url");
+        currentSheetUrl = "";
+        hideAllViews();
+        document.getElementById('initSheetUrl').value = "";
+        document.getElementById('viewInitLogin').classList.remove('hidden');
+        showStatus("試算表連線失敗，請重新輸入", "error");
       }
     } catch(e) {
-      showStatus("無法連接後端，請確認 GAS 部署網址是否正確", "error");
+      showStatus("無法連接後端，請確認網路或 GAS 網址", "error");
     }
   };
 
@@ -268,7 +284,6 @@
     try {
       const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
       if (res.status === "success") {
-        currentSheetUrl = res.sheetUrl;
         if (res.systemName) applySystemName(res.systemName);
         clearStatus();
         showClubSelection(res.clubs);
@@ -278,13 +293,13 @@
     } catch(e) { showStatus("讀取失敗", "error"); }
   }
 
-  // 初次初始化綁定 (寫入伺服器端永久保存)
+  // 本機初次綁定
   async function initConnectAndLogin() {
     const url = document.getElementById('initSheetUrl').value.trim();
     const pwd = document.getElementById('initAdminPwd').value.trim();
     if (!url || !pwd) return showStatus("請輸入網址與管理密碼", "error");
 
-    showStatus("正在綁定並永久儲存試算表...", "loading");
+    showStatus("正在驗證並綁定試算表...", "loading");
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -297,14 +312,15 @@
 
       if (res.status === "success") {
         currentSheetUrl = url;
+        localStorage.setItem("club_sheet_url", url); // 儲存在該電腦的 localStorage
         localStorage.setItem("club_admin_logged", "true");
         localStorage.setItem("club_admin_pwd", pwd);
         showStatus("綁定成功！", "success");
         setTimeout(() => { clearStatus(); loadSystemAndClubs(); }, 1000);
       } else {
-        showStatus(res.message || "綁定失敗！", "error");
+        showStatus(res.message || "密碼錯誤或無法開啟該試算表！", "error");
       }
-    } catch(e) { showStatus("綁定失敗", "error"); }
+    } catch(e) { showStatus("連線失敗", "error"); }
   }
 
   function showClubSelection(clubs) {
@@ -334,7 +350,6 @@
 
     const navGrid = document.getElementById('mainNavGrid');
     if (isDedicatedMode) {
-      // 專屬直達模式：隱藏頂部導覽列
       navGrid.classList.add('hidden');
     } else {
       navGrid.classList.remove('hidden');
@@ -350,7 +365,7 @@
     loadSystemAndClubs();
   }
 
-  // 刷新點名名單
+  // 刷新點名清單
   async function refreshLists() {
     const date = document.getElementById('targetDate').value;
     if (!currentClub || !date) return;
@@ -396,7 +411,7 @@
     });
   }
 
-  // 1. 點擊送出點名
+  // 點名送出流程
   function startSubmit(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
     if (!box.length) return showStatus("請先勾選學生！", "error");
@@ -423,7 +438,6 @@
     openPwdModal();
   }
 
-  // 2. 密碼彈窗
   function openPwdModal() {
     document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
     document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】點名密碼以送出紀錄：`;
@@ -445,7 +459,6 @@
     executePost(pwd);
   }
 
-  // 3. 發送請求寫入試算表
   async function executePost(pwd) {
     if (!pendingActionData) return;
 
@@ -479,7 +492,7 @@
     }
   }
 
-  // 後台專區
+  // 後台管理
   function openAdminPanel() {
     hideAllViews();
     document.getElementById('viewAdminPanel').classList.remove('hidden');
@@ -524,7 +537,8 @@
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
     if (res.clubs && res.clubs.length > 0) {
       res.clubs.forEach(c => {
-        const directUrl = `${baseUrl}?club=${encodeURIComponent(c)}`;
+        // 專屬直達網址會自動附帶 sheet 與 club 參數
+        const directUrl = `${baseUrl}?sheet=${encodeURIComponent(currentSheetUrl)}&club=${encodeURIComponent(c)}`;
         const row = document.createElement('div');
         row.className = "club-item-row";
         row.innerHTML = `
@@ -546,7 +560,7 @@
     }
   }
 
-  // 登出只清除本機的管理員登入身分，不會刪除伺服器儲存的試算表網址
+  // 登出管理員身分（本機試算表網址保留）
   function adminLogout() {
     localStorage.removeItem("club_admin_logged");
     localStorage.removeItem("club_admin_pwd");
@@ -554,7 +568,7 @@
     location.reload();
   }
 
-  // 後台儲存系統設定 (包含修改試算表網址)
+  // 後台儲存設定 (包含修改本機試算表網址)
   async function saveSystemConfig() {
     const newSheet = document.getElementById('cfgSheetUrl').value.trim();
     const newName = document.getElementById('cfgSystemName').value.trim();
@@ -563,7 +577,7 @@
 
     if (!newSheet) return showStatus("試算表網址不能為空", "error");
 
-    showStatus("正在儲存並同步伺服器設定...", "loading");
+    showStatus("正在儲存設定...", "loading");
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -579,9 +593,10 @@
 
       if (res.status === "success") {
         currentSheetUrl = newSheet;
+        localStorage.setItem("club_sheet_url", newSheet); // 更新本機儲存的試算表網址
         applySystemName(newName);
         if (newPwd) localStorage.setItem("club_admin_pwd", newPwd);
-        showStatus("設定已成功永久儲存！", "success");
+        showStatus("設定已成功儲存！", "success");
         setTimeout(() => { clearStatus(); setupAdminActionArea(); }, 1500);
       } else {
         showStatus("儲存失敗：" + res.message, "error");
