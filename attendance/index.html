@@ -25,7 +25,7 @@
     .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; border: 1px solid var(--danger); margin-top: 10px; }
     .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
     .btn-primary { background: var(--primary); color: white; width: 100%; margin-top: 8px; }
-    .btn-copy { background: #e8f0fe; color: var(--primary); border: 1px solid var(--primary); font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .btn-copy { background: #e8f0fe; color: var(--primary); border: 1px solid var(--primary); font-size: 12px; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; white-space: nowrap; }
 
     .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
     .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--gray); font-weight: bold; }
@@ -39,7 +39,8 @@
     .stu-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .stu-class { font-size: 11px; color: #1a73e8; background: #e8f0fe; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
 
-    .club-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: white; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 6px; font-size: 14px; }
+    .club-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: white; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 14px; gap: 8px; }
+    .club-url-text { font-size: 12px; color: #5f6368; font-family: monospace; word-break: break-all; margin-top: 3px; }
 
     input[type="date"], input[type="password"], input[type="text"], textarea { 
       width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; box-sizing: border-box; 
@@ -88,7 +89,7 @@
 
   <!-- 2. 社團 / 班級清單首頁 -->
   <div id="viewClubSelect" class="hidden">
-    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (修改試算表/新增班級/密碼)</button>
+    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (修改試算表/新增班級/密碼/短網址)</button>
     <p style="text-align:center; font-weight:bold;">請選擇<span class="lbl-sys">社團</span>：</p>
     <div id="clubBtns">讀取中...</div>
   </div>
@@ -109,6 +110,13 @@
 
     <!-- 後台管理功能專區 -->
     <div id="adminActionArea" class="hidden">
+      <!-- 各班專屬短網址清單 -->
+      <div class="section" style="border-left: 4px solid var(--primary);">
+        <label><b>🔗 各班專屬短網址 (傳給老師免登入直達)：</b></label>
+        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">已自動生成短網址，點擊即可複製發送給老師：</p>
+        <div id="directLinksList">載入中...</div>
+      </div>
+
       <!-- 本機試算表網址修改與系統設定 -->
       <div class="section" style="border-left: 4px solid var(--admin);">
         <label><b>🔗 本機綁定試算表網址：</b></label>
@@ -123,15 +131,7 @@
         
         <button id="btnSaveConfig" class="btn-primary" onclick="saveSystemConfig()">儲存設定</button>
         
-        <!-- 清除/刪除綁定按鈕 -->
         <button id="btnClearBinding" class="btn-danger" style="margin-top:10px;" onclick="clearSheetBinding()">🗑️ 清除本機試算表綁定 (重設為空白)</button>
-      </div>
-
-      <!-- 各班專屬免登入網址清單 -->
-      <div class="section" style="border-left: 4px solid var(--primary);">
-        <label><b>🔗 各班專屬直達點名網址：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">傳給老師後直接開啟點名，不顯示任何導覽按鈕，送出時輸入該班密碼：</p>
-        <div id="directLinksList"></div>
       </div>
 
       <!-- 新增社團/班級 -->
@@ -145,7 +145,7 @@
         <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
         <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王維磬&#9;三年二班&#10;張晴嵐&#9;二年三班"></textarea>
         
-        <button id="btnCreateClub" class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬網址</button>
+        <button id="btnCreateClub" class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並自動生成短網址</button>
       </div>
     </div>
   </div>
@@ -218,7 +218,6 @@
   let isDedicatedMode = false;
   let pendingActionData = null;
 
-  // 按鈕 Loading 切換共用函式
   function setBtnLoading(btn, isLoading, loadingText = "執行中...") {
     if (!btn) return;
     if (isLoading) {
@@ -309,7 +308,6 @@
     } catch(e) { showStatus("讀取失敗", "error"); }
   }
 
-  // 本機初次綁定
   async function initConnectAndLogin() {
     const url = document.getElementById('initSheetUrl').value.trim();
     const pwd = document.getElementById('initAdminPwd').value.trim();
@@ -347,7 +345,6 @@
     }
   }
 
-  // 清除/刪除本機試算表綁定
   function clearSheetBinding() {
     if (!confirm("確定要清除本機綁定的試算表網址嗎？\n\n清除後此電腦將回歸初始空白設定頁面。")) return;
     
@@ -541,7 +538,7 @@
     }
   }
 
-  // 後台專區管理
+  // 後台專區
   function openAdminPanel() {
     hideAllViews();
     document.getElementById('viewAdminPanel').classList.remove('hidden');
@@ -580,30 +577,43 @@
     }
   }
 
+  // 設定後台專區並載入短網址
   async function setupAdminActionArea() {
     document.getElementById('adminLoginArea').classList.add('hidden');
     document.getElementById('adminActionArea').classList.remove('hidden');
     document.getElementById('cfgSystemName').value = systemName;
     document.getElementById('cfgSheetUrl').value = currentSheetUrl;
 
-    const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
     const listDiv = document.getElementById('directLinksList');
-    listDiv.innerHTML = "";
+    listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>正在讀取短網址清單...</p>";
 
-    const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    if (res.clubs && res.clubs.length > 0) {
-      res.clubs.forEach(c => {
-        const directUrl = `${baseUrl}?sheet=${encodeURIComponent(currentSheetUrl)}&club=${encodeURIComponent(c)}`;
-        const row = document.createElement('div');
-        row.className = "club-item-row";
-        row.innerHTML = `
-          <span><b>${c}</b> (密碼: ${res.clubPasswords[c] || '無/預設'})</span>
-          <button class="btn-copy" onclick="copyText('${directUrl}', '${c} 專屬網址')">📋 複製專屬網址</button>
-        `;
-        listDiv.appendChild(row);
-      });
-    } else {
-      listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>目前尚無工作表</p>";
+    try {
+      const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
+      listDiv.innerHTML = "";
+
+      const baseUrl = `${window.location.origin}${window.location.pathname}`;
+      if (res.clubs && res.clubs.length > 0) {
+        res.clubs.forEach(c => {
+          const directLongUrl = `${baseUrl}?sheet=${encodeURIComponent(currentSheetUrl)}&club=${encodeURIComponent(c)}`;
+          // 優先讀取後端儲存的短網址，若無則顯示原始直達網址
+          const displayUrl = (res.clubShortUrls && res.clubShortUrls[c]) ? res.clubShortUrls[c] : directLongUrl;
+
+          const row = document.createElement('div');
+          row.className = "club-item-row";
+          row.innerHTML = `
+            <div style="overflow:hidden;">
+              <div><b>${c}</b> <span style="font-size:12px; color:gray;">(密碼: ${res.clubPasswords[c] || '無/預設'})</span></div>
+              <div class="club-url-text">${displayUrl}</div>
+            </div>
+            <button class="btn-copy" onclick="copyText('${displayUrl}', '${c} 專屬短網址')">📋 複製短網址</button>
+          `;
+          listDiv.appendChild(row);
+        });
+      } else {
+        listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>目前尚無工作表</p>";
+      }
+    } catch(e) {
+      listDiv.innerHTML = "<p style='color:red; font-size:13px;'>讀取短網址清單失敗</p>";
     }
   }
 
@@ -664,12 +674,14 @@
     }
   }
 
+  // 新增工作表並自動請求短網址
   async function createNewClub() {
     const name = document.getElementById('newClubName').value.trim();
     const pwd = document.getElementById('newClubPwd').value.trim();
     const rawData = document.getElementById('pasteStudents').value.trim();
     const adminPwd = localStorage.getItem("club_admin_pwd");
     const btn = document.getElementById('btnCreateClub');
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
 
     if (!name) return showStatus("請輸入名稱", "error");
 
@@ -686,8 +698,8 @@
       });
     });
 
-    setBtnLoading(btn, true);
-    showStatus("正在建立工作表...", "loading");
+    setBtnLoading(btn, true, "建立中(生成短網址)...");
+    showStatus("正在建立工作表並生成短網址...", "loading");
 
     try {
       const res = await fetch(API_URL, {
@@ -698,7 +710,8 @@
           password: adminPwd,
           newClubName: name,
           clubPassword: pwd || "1234",
-          students: students
+          students: students,
+          baseUrl: baseUrl
         })
       }).then(r => r.json());
 
@@ -707,7 +720,7 @@
         document.getElementById('newClubName').value = "";
         document.getElementById('newClubPwd').value = "";
         document.getElementById('pasteStudents').value = "";
-        setupAdminActionArea();
+        setupAdminActionArea(); // 重新整理清單
       } else {
         showStatus("建立失敗：" + res.message, "error");
       }
