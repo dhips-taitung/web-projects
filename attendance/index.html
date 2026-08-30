@@ -47,10 +47,37 @@
     textarea { height: 110px; font-family: monospace; }
     
     .hidden { display: none !important; }
-    #status { text-align: center; margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; min-height: 20px; font-size: 14px; }
-    .msg-success { background-color: #e6f4ea; color: var(--success); }
-    .msg-error { background-color: #fce8e6; color: var(--danger); }
-    .msg-loading { color: var(--gray); font-style: italic; }
+
+    /* 狀態提示區：放大 1.5 倍並加入顯眼配色與邊框 */
+    #status { 
+      text-align: center; 
+      margin-top: 15px; 
+      padding: 12px 16px; 
+      border-radius: 8px; 
+      font-weight: bold; 
+      min-height: 28px; 
+      font-size: 21px; /* 原本 14px 的 1.5 倍 */
+      line-height: 1.4;
+      transition: all 0.25s ease-in-out;
+    }
+    .msg-loading { 
+      background-color: #e8f0fe; 
+      color: #1a73e8; 
+      border: 2px solid #1a73e8;
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.18);
+    }
+    .msg-success { 
+      background-color: #e6f4ea; 
+      color: var(--success); 
+      border: 2px solid var(--success);
+      box-shadow: 0 4px 12px rgba(30, 142, 62, 0.18);
+    }
+    .msg-error { 
+      background-color: #fce8e6; 
+      color: var(--danger); 
+      border: 2px solid var(--danger);
+      box-shadow: 0 4px 12px rgba(217, 48, 37, 0.18);
+    }
 
     /* 密碼彈窗 */
     .modal-overlay {
@@ -135,13 +162,13 @@
       <!-- 新增社團/班級 -->
       <div class="section">
         <label><b>➕ 新增<span class="lbl-sys">社團</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 課照A 或 直排輪)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
+        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 課照A班 或 直排輪)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
         
         <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
         <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)" onkeydown="if(event.key==='Enter') document.getElementById('pasteStudents').focus();">
         
         <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
-        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王小明&#9;三年二班&#10;林小華&#9;二年三班"></textarea>
+        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王小明&#9;三年二班&#10;李小華&#9;二年三班"></textarea>
         
         <button id="btnCreateClub" class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬短網址</button>
       </div>
@@ -189,6 +216,7 @@
     </div>
   </div>
 
+  <!-- 醒目的大字體狀態提示區 -->
   <div id="status"></div>
 </div>
 
@@ -216,7 +244,6 @@
   let isDedicatedMode = false;
   let pendingActionData = null;
 
-  // 提取試算表 ID（精簡網址長度）
   function extractSheetId(urlOrId) {
     if (!urlOrId) return "";
     const match = urlOrId.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -502,6 +529,7 @@
     executePost(pwd);
   }
 
+  // 寫入試算表：按鈕文字保持「出席點名」與「學生請假」，僅在紅框提示區顯示醒目訊息
   async function executePost(pwd) {
     if (!pendingActionData) return;
 
@@ -517,8 +545,12 @@
 
     const btnSubmit = document.getElementById('btnSubmitAtt');
     const btnLeave = document.getElementById('btnLeaveAtt');
-    setBtnLoading(btnSubmit, true, "寫入中...");
-    setBtnLoading(btnLeave, true, "寫入中...");
+    
+    // 僅暫時鎖定按鈕避免連點，不修改按鈕文字
+    if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.style.opacity = "0.6"; }
+    if (btnLeave) { btnLeave.disabled = true; btnLeave.style.opacity = "0.6"; }
+
+    // 在下方狀態提示區放大顯示醒目訊息
     showStatus("正在驗證密碼並寫入試算表...", "loading");
 
     try {
@@ -529,7 +561,7 @@
 
       if (res.status === 'success') {
         showStatus(res.message, "success");
-        setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
+        setTimeout(() => { clearStatus(); refreshLists(); }, 1200);
       } else {
         showStatus(res.message || "密碼錯誤，寫入失敗", "error");
         pendingActionData = { action: payload.action, students: payload.students, studentName: payload.studentName };
@@ -538,8 +570,9 @@
     } catch(e) { 
       showStatus("送出失敗，請檢查網路或試算表權限", "error"); 
     } finally {
-      setBtnLoading(btnSubmit, false);
-      setBtnLoading(btnLeave, false);
+      // 復原按鈕點擊狀態
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.style.opacity = "1"; }
+      if (btnLeave) { btnLeave.disabled = false; btnLeave.style.opacity = "1"; }
     }
   }
 
@@ -596,7 +629,6 @@
 
     if (res.clubs && res.clubs.length > 0) {
       res.clubs.forEach(c => {
-        // 使用精簡 ID 生成專屬網址
         const longUrl = `${baseUrl}?sheet=${encodeURIComponent(cleanSheetId)}&club=${encodeURIComponent(c)}`;
         const row = document.createElement('div');
         row.className = "club-item-row";
@@ -611,7 +643,6 @@
     }
   }
 
-  // 請求後端生成短網址並複製
   async function generateAndCopyShortUrl(longUrl, clubName, btn) {
     setBtnLoading(btn, true, "生成中...");
     showStatus("正在產生短網址...", "loading");
@@ -741,6 +772,13 @@
     } finally {
       setBtnLoading(btn, false);
     }
+  }
+
+  function copyText(text, label) {
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus(`【${label}】已成功複製到剪貼簿！`, "success");
+      setTimeout(clearStatus, 2500);
+    });
   }
 
   function switchTab(m) {
