@@ -79,6 +79,7 @@
       box-shadow: 0 4px 12px rgba(217, 48, 37, 0.18);
     }
 
+    /* 旋轉動畫指示 */
     .loader-box {
       grid-column: span 2;
       text-align: center;
@@ -121,15 +122,18 @@
 <div class="card">
   <h2><span class="lbl-sys">社團</span>點名簿</h2>
 
-  <!-- 1. 初次綁定視圖 -->
+  <!-- 1. 初次未綁定時的設定視圖 -->
   <div id="viewInitLogin" class="hidden">
     <div class="section">
       <h4 style="margin:0 0 10px 0; text-align:center;">綁定 Google 試算表</h4>
+      <p style="font-size:12px; color:#5f6368; line-height:1.5; margin-bottom:8px;">
+        💡 <b>提示：</b>可在您自己的 Google 雲端建立空白試算表，並確認該試算表右上角【共用】已設為<b>「知道連結的任何人均可編輯」</b>，再將網址貼於下方：
+      </p>
       <label><b>請輸入試算表網址：</b></label>
       <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." onkeydown="if(event.key==='Enter') document.getElementById('initAdminPwd').focus();">
       
       <label style="margin-top:10px; display:block;"><b>管理密碼 (初次預設 1234)：</b></label>
-      <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼" onkeydown="if(event.key==='Enter') initConnectAndLogin();">
+      <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼 (預設: 1234)" onkeydown="if(event.key==='Enter') initConnectAndLogin();">
       <button id="btnInitConnect" class="btn-primary" onclick="initConnectAndLogin()">確認並在本機綁定試算表</button>
     </div>
   </div>
@@ -157,20 +161,15 @@
     </div>
 
     <div id="adminActionArea" class="hidden">
-      <!-- 快捷工具專區 -->
-      <div class="section" style="border-left: 4px solid var(--warning); background:#fffde7;">
-        <label><b>⚡ 試算表快捷設定工具：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">解決權限受阻或新試算表尚未初始化問題：</p>
-        <button id="btnSetPublic" class="btn-primary" style="background:#0288d1; margin-top:0; margin-bottom:8px;" onclick="setSheetPublicEditable()">🌐 一鍵改為「知道連結的任何人皆可編輯」</button>
-        <button id="btnInitDefaultSheets" class="btn-primary" style="background:#5c6bc0; margin-top:0;" onclick="initDefaultSheets()">📋 一鍵建立範例社團與管理工作表</button>
-      </div>
-
-      <!-- 系統綁定與密碼設定 -->
+      <!-- 試算表設定區 -->
       <div class="section" style="border-left: 4px solid var(--admin);">
         <label><b>🔗 本機綁定試算表網址：</b></label>
         <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址" onkeydown="if(event.key==='Enter') saveSystemConfig();">
 
-        <label style="margin-top:8px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
+        <!-- 一鍵公開編輯權限按鈕 -->
+        <button id="btnMakePublic" class="btn-primary" style="background:#0f9d58; margin-top:8px;" onclick="makeSheetPublicEditable()">🔓 一鍵將此試算表設為「知道連結可編輯」</button>
+
+        <label style="margin-top:10px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
         <input type="text" id="cfgSystemName" placeholder="例如：社團" onkeydown="if(event.key==='Enter') saveSystemConfig();">
         
         <label style="margin-top:8px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
@@ -180,17 +179,17 @@
         <button id="btnClearBinding" class="btn-danger" style="margin-top:10px;" onclick="clearSheetBinding()">🗑️ 清除本機試算表綁定</button>
       </div>
 
-      <!-- 班級短網址 -->
+      <!-- 專屬短網址清單 -->
       <div class="section" style="border-left: 4px solid var(--primary);">
         <label><b>🔗 各班專屬直達短網址：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">點擊立即複製（已自動記憶短網址）：</p>
+        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">點擊立即複製（本機已自動記憶短網址）：</p>
         <div id="directLinksList"></div>
       </div>
 
       <!-- 新增或覆寫工作表 -->
       <div class="section">
         <label><b>➕ 新增或更新<span class="lbl-sys">社團</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (已有相同工作表將直接更新名單)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
+        <input type="text" id="newClubName" placeholder="輸入名稱 (如已有相同工作表，將直接更新名單)" onkeydown="if(event.key==='Enter') document.getElementById('newClubPwd').focus();">
         
         <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
         <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)" onkeydown="if(event.key==='Enter') document.getElementById('pasteStudents').focus();">
@@ -222,7 +221,6 @@
       <input type="date" id="targetDate" onchange="refreshLists()">
     </div>
 
-    <!-- 尚未點名清單 -->
     <div id="takeAttendanceArea">
       <div class="section">
         <label><b>尚未處理學生 (請勾選)：</b></label>
@@ -234,7 +232,6 @@
       </div>
     </div>
 
-    <!-- 已點查詢清單 -->
     <div id="queryAttendanceArea" class="hidden">
       <div class="section">
         <label><b>名單確認 (*為請假)：</b></label>
@@ -248,7 +245,7 @@
   <div id="status"></div>
 </div>
 
-<!-- 5. 密碼輸入彈窗 -->
+<!-- 5. 密碼彈窗 -->
 <div id="pwdModal" class="modal-overlay hidden">
   <div class="modal-card">
     <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">點名密碼驗證</h3>
@@ -274,8 +271,16 @@
 
   function extractSheetId(urlOrId) {
     if (!urlOrId) return "";
-    const match = urlOrId.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : urlOrId.trim();
+    let str = urlOrId.trim();
+    const match = str.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) return match[1];
+    if (str.indexOf("/") !== -1) {
+      let parts = str.split("/");
+      for (let p of parts) {
+        if (p.length > 25 && !p.includes("?")) return p;
+      }
+    }
+    return str;
   }
 
   function setBtnLoading(btn, isLoading, loadingText = "執行中...") {
@@ -349,8 +354,49 @@
     document.querySelectorAll('.lbl-sys').forEach(el => el.innerText = name);
   }
 
+  /**
+   * 初次綁定試算表 (先經 POST 驗證密碼與建立系統表)
+   */
+  async function initConnectAndLogin() {
+    let url = document.getElementById('initSheetUrl').value.trim();
+    const pwd = document.getElementById('initAdminPwd').value.trim();
+    const btn = document.getElementById('btnInitConnect');
+
+    if (!url || !pwd) return showStatus("請輸入試算表網址與管理密碼", "error");
+
+    setBtnLoading(btn, true);
+    showStatus("正在驗證試算表連線並初始化...", "loading");
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'initSetup',
+          sheetUrl: url,
+          password: pwd
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
+        currentSheetUrl = url;
+        localStorage.setItem("club_sheet_url", url);
+        localStorage.setItem("club_admin_logged", "true");
+        localStorage.setItem("club_admin_pwd", pwd);
+        if (res.systemName) applySystemName(res.systemName);
+        showStatus("✔️ 試算表綁定成功！", "success");
+        setTimeout(() => { clearStatus(); loadAllPageData(); }, 800);
+      } else {
+        showStatus(res.message || "連線失敗，請檢查網址或權限", "error");
+      }
+    } catch(e) { 
+      showStatus("連線失敗，請確認 Google 試算表已開放為「知道連結可編輯」", "error"); 
+    } finally {
+      setBtnLoading(btn, false);
+    }
+  }
+
   async function loadAllPageData(silent = false) {
-    if (!silent) showStatus("⏳ 正在同步雲端資料...", "loading");
+    if (!silent) showStatus("⏳ 正在同步雲端最新資料...", "loading");
 
     const date = document.getElementById('targetDate').value;
     const sheetId = extractSheetId(currentSheetUrl);
@@ -377,7 +423,38 @@
         showStatus("讀取失敗：" + res.message, "error");
       }
     } catch(e) {
-      if (!silent) showStatus("連線逾時，請檢查網路狀態", "error");
+      if (!silent) showStatus("連線逾時，請檢查網路或試算表共用設定", "error");
+    }
+  }
+
+  /**
+   * 一鍵將試算表權限設為「知道連結任何人可編輯」
+   */
+  async function makeSheetPublicEditable() {
+    const btn = document.getElementById('btnMakePublic');
+    const adminPwd = localStorage.getItem("club_admin_pwd") || "";
+    setBtnLoading(btn, true, "正在修改權限...");
+    showStatus("正在修改 Google 雲端權限...", "loading");
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'makeSheetPublicEditable',
+          sheetUrl: currentSheetUrl,
+          password: adminPwd
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
+        showStatus("✔️ " + res.message, "success");
+      } else {
+        showStatus(res.message, "error");
+      }
+    } catch(e) {
+      showStatus("修改失敗，請至試算表右上角手動設定共用權限", "error");
+    } finally {
+      setBtnLoading(btn, false);
     }
   }
 
@@ -396,7 +473,7 @@
         div.appendChild(b);
       });
     } else {
-      div.innerHTML = `<p style='text-align:center; color:gray;'>目前尚無${systemName}工作表，請點擊上方進入後台建立。</p>`;
+      div.innerHTML = `<p style='text-align:center; color:gray;'>目前尚無${systemName}項目，請點擊上方進入後台建立。</p>`;
     }
   }
 
@@ -624,66 +701,7 @@
         listDiv.appendChild(row);
       });
     } else {
-      listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>目前尚無工作表，可點擊上方一鍵初始化</p>";
-    }
-  }
-
-  // 一鍵改為知道連結任何人可編輯
-  async function setSheetPublicEditable() {
-    const adminPwd = localStorage.getItem("club_admin_pwd");
-    const btn = document.getElementById('btnSetPublic');
-    setBtnLoading(btn, true, "設定中...");
-    showStatus("正在修改 Google 試算表權限...", "loading");
-
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'setPublicEditable',
-          sheetUrl: currentSheetUrl,
-          password: adminPwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === 'success') {
-        showStatus("✔️ " + res.message, "success");
-      } else {
-        showStatus("設定失敗：" + res.message, "error");
-      }
-    } catch(e) {
-      showStatus("設定失敗，請檢查權限", "error");
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-  // 一鍵建立範例與管理工作表
-  async function initDefaultSheets() {
-    const adminPwd = localStorage.getItem("club_admin_pwd");
-    const btn = document.getElementById('btnInitDefaultSheets');
-    setBtnLoading(btn, true, "建立中...");
-    showStatus("正在初始化工作表...", "loading");
-
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'initDefaultSheets',
-          sheetUrl: currentSheetUrl,
-          password: adminPwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === 'success') {
-        showStatus("✔️ " + res.message, "success");
-        setupAdminActionArea();
-      } else {
-        showStatus("建立失敗：" + res.message, "error");
-      }
-    } catch(e) {
-      showStatus("建立失敗", "error");
-    } finally {
-      setBtnLoading(btn, false);
+      listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>目前尚無工作表</p>";
     }
   }
 
@@ -825,47 +843,6 @@
       }
     } catch(e) { 
       showStatus("儲存失敗", "error"); 
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-  // 修正初次綁定流程：先進行密碼與連線驗證
-  async function initConnectAndLogin() {
-    const url = document.getElementById('initSheetUrl').value.trim();
-    const pwd = document.getElementById('initAdminPwd').value.trim();
-    const btn = document.getElementById('btnInitConnect');
-
-    if (!url || !pwd) return showStatus("請輸入網址與管理密碼", "error");
-
-    setBtnLoading(btn, true, "連線驗證中...");
-    showStatus("正在驗證試算表與管理密碼...", "loading");
-
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'initSetup',
-          sheetUrl: url,
-          password: pwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === 'success') {
-        currentSheetUrl = url;
-        localStorage.setItem("club_sheet_url", url);
-        localStorage.setItem("club_admin_logged", "true");
-        localStorage.setItem("club_admin_pwd", pwd);
-        showStatus("✔️ 試算表連線成功！", "success");
-        setTimeout(() => {
-          clearStatus();
-          loadAllPageData();
-        }, 800);
-      } else {
-        showStatus(res.message || "連線或密碼錯誤！", "error");
-      }
-    } catch(e) {
-      showStatus("無法連接，請確認試算表網址格式正確", "error");
     } finally {
       setBtnLoading(btn, false);
     }
